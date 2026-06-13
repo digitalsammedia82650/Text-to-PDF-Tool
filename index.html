@@ -2,63 +2,69 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pro Doc Platform</title>
+    <title>Professional Document Studio</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { margin:0; background:#e2e8f0; font-family:Arial,sans-serif; }
-        .ribbon { background:#fff; padding:10px; border-bottom:1px solid #ccc; display:flex; gap:5px; position:sticky; top:0; z-index:1000; }
-        .workspace { padding:40px; display:flex; flex-direction:column; align-items:center; gap:40px; }
+        body { margin: 0; background: #e2e8f0; font-family: Arial, sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
         
-        /* Professional A4 Page Canvas */
-        .page { 
-            width:794px; min-height:1123px; background:white; 
-            padding:96px; box-sizing:border-box; 
-            box-shadow:0 0 10px rgba(0,0,0,0.1); 
-            position:relative; overflow:hidden; 
-        }
+        /* Toolbar */
+        .ribbon { background: #fff; padding: 12px; border-bottom: 1px solid #ccc; display: flex; gap: 10px; position: sticky; top: 0; z-index: 1000; flex-wrap: wrap; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        button { padding: 8px 15px; cursor: pointer; border: 1px solid #ccc; background: #f8f8f8; border-radius: 4px; font-weight: bold; }
+        button:hover { background: #eee; }
         
-        /* Editor Area */
-        #editor { outline:none; min-height:931px; }
+        /* Workspace */
+        .workspace { padding: 40px; display: flex; flex-direction: column; align-items: center; gap: 40px; }
+        .page { width: 794px; min-height: 1123px; background: white; padding: 96px; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
+        
+        /* Hidden Editor (The "Brain") */
+        #editor { outline: none; width: 602px; min-height: 931px; border: 1px dashed #ccc; padding: 5px; }
+        .editor-container { margin-bottom: 20px; border: 2px solid #6366f1; padding: 20px; background: white; width: 834px; }
     </style>
 </head>
 <body>
 
 <div class="ribbon">
-    <button onclick="document.execCommand('bold', false)"><b>B</b></button>
-    <button onclick="document.execCommand('italic', false)"><i>I</i></button>
-    <button onclick="document.execCommand('underline', false)"><u>U</u></button>
-    <button onclick="document.execCommand('justifyFull', false)">Justify</button>
-    <button onclick="document.execCommand('insertUnorderedList', false)">List</button>
-    <button onclick="generatePages()">Re-Flow Pages</button>
-    <button onclick="exportPDF()">Export PDF</button>
+    <button onclick="document.execCommand('bold')">B</button>
+    <button onclick="document.execCommand('italic')">I</button>
+    <button onclick="document.execCommand('underline')">U</button>
+    <button onclick="document.execCommand('justifyLeft')">Left</button>
+    <button onclick="document.execCommand('justifyCenter')">Center</button>
+    <button onclick="document.execCommand('justifyFull')">Justify</button>
+    <button onclick="document.execCommand('insertUnorderedList')">List</button>
+    <button onclick="reflow()">Reflow Content</button>
+    <button onclick="exportPDF()" style="background:#0f172a; color:#fff;">Export PDF</button>
 </div>
 
 <div class="workspace" id="workspace">
-    <div class="page" id="page1">
-        <div id="editor" contenteditable="true" oninput="generatePages()">
-            <h1>Paste your document here...</h1>
-        </div>
+    </div>
+
+<div class="editor-container">
+    <h3>Live Editor (Type or Paste here)</h3>
+    <div id="editor" contenteditable="true" oninput="reflow()">
+        <h1>New Document</h1>
+        <p>Your text, images, and tables will flow across pages automatically...</p>
     </div>
 </div>
 
 <script>
     const editor = document.getElementById('editor');
-    const workspace = document.getElementById('workspace');
+    
+    // Capture paste events
+    editor.addEventListener('paste', () => setTimeout(reflow, 100));
 
-    function generatePages() {
+    function reflow() {
         const content = editor.innerHTML;
-        const pageHeight = 1123 - 192; // Height minus padding
+        const workspace = document.getElementById('workspace');
+        workspace.innerHTML = ''; // Clear existing visual pages
 
-        // Measure actual content height
         const temp = document.createElement('div');
-        temp.style.width = '602px'; // 794 minus padding
-        temp.style.position = 'absolute'; temp.style.visibility = 'hidden';
+        temp.style.width = '602px'; temp.style.position = 'absolute'; temp.style.visibility = 'hidden';
         temp.innerHTML = content;
         document.body.appendChild(temp);
 
+        const pageHeight = 931; // Content area height
         const totalPages = Math.max(1, Math.ceil(temp.offsetHeight / pageHeight));
-        workspace.innerHTML = ''; // Clear current pages
 
         for (let i = 0; i < totalPages; i++) {
             const page = document.createElement('div');
@@ -67,7 +73,7 @@
                 <div style="height:${pageHeight}px; overflow:hidden;">
                     <div style="margin-top:-${i * pageHeight}px">${content}</div>
                 </div>
-                <div style="position:absolute; bottom:20px; text-align:center; width:100%;">Page ${i + 1}</div>
+                <div style="position:absolute; bottom:40px; width:100%; text-align:center; color:#888;">Page ${i + 1}</div>
             `;
             workspace.appendChild(page);
         }
@@ -85,6 +91,8 @@
         }
         pdf.save("document.pdf");
     }
+
+    window.onload = reflow;
 </script>
 </body>
 </html>
