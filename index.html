@@ -2,27 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pro Doc Architect</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --page-w: 794px; --bg: #cbd5e1; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; height: 100vh; flex-direction: column; }
-        .toolbar { padding: 10px; background: #fff; border-bottom: 1px solid #ddd; display: flex; gap: 8px; flex-wrap: wrap; }
+        body { margin: 0; background: #cbd5e1; font-family: 'Arial', sans-serif; display: flex; flex-direction: column; height: 100vh; }
+        .toolbar { padding: 10px; background: #fff; border-bottom: 1px solid #ddd; display: flex; gap: 10px; }
         .workspace { flex: 1; overflow-y: auto; padding: 50px; display: flex; flex-direction: column; align-items: center; gap: 50px; }
         
-        /* The Ruler */
-        .ruler { width: var(--page-w); height: 30px; background: white; border: 1px solid #ddd; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; }
-        
-        /* The Page */
-        .page { width: var(--page-w); min-height: 1123px; background: white; padding: 70px 60px 90px 60px; box-sizing: border-box; border: 1px solid #d1d5db; box-shadow: 0 10px 25px rgba(0,0,0,.12); position: relative; }
+        .page { width: 794px; min-height: 1123px; background: white; padding: 70px 60px 90px 60px; box-sizing: border-box; border: 1px solid #d1d5db; box-shadow: 0 10px 25px rgba(0,0,0,.12); position: relative; }
         .doc-header { position: absolute; top: 15px; left: 60px; right: 60px; border-bottom: 1px solid #ddd; padding-bottom: 8px; font-size: 12px; color: #666; }
         .doc-footer { position: absolute; bottom: 20px; left: 60px; right: 60px; border-top: 1px solid #ddd; padding-top: 8px; text-align: center; font-size: 12px; color: #666; }
         
-        /* Source Editor (Hidden) */
-        #hiddenEditor { display: none; }
-        .content { outline: none; }
+        #editor { width: 794px; min-height: 500px; padding: 20px; background: white; border: 1px solid #ccc; outline: none; }
+        .ruler { width: 794px; height: 30px; background: white; border: 1px solid #ddd; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -31,49 +24,58 @@
     <button onclick="document.execCommand('bold')">Bold</button>
     <button onclick="document.execCommand('insertUnorderedList')">List</button>
     <button onclick="document.execCommand('justifyCenter')">Center</button>
-    <button onclick="exportToPDF()">Export Professional PDF</button>
+    <button onclick="exportToPDF()" style="background:#0f172a; color:white;">Export PDF</button>
 </div>
 
 <div class="workspace">
     <div class="ruler"><span>0</span><span>2</span><span>4</span><span>6</span><span>8</span></div>
+    <div id="editor" contenteditable="true" oninput="paginate()">
+        <h1>Document Title</h1>
+        <p>Start typing here to see pages generate automatically...</p>
+    </div>
     <div id="pagesContainer"></div>
-</div>
-
-<div id="hiddenEditor" contenteditable="true" oninput="paginate()">
-    <h1>Document Title</h1>
-    <p>Start typing here. As content grows, new pages will automatically generate...</p>
 </div>
 
 <script>
     function paginate() {
-        const source = document.getElementById('hiddenEditor');
+        const editor = document.getElementById('editor');
         const container = document.getElementById('pagesContainer');
-        const content = source.innerHTML;
-        
         container.innerHTML = '';
+
+        // Create virtual layout for measurement
         const temp = document.createElement('div');
-        temp.style.width = '674px'; // 794 - padding
+        temp.style.width = '674px'; 
         temp.style.position = 'absolute'; temp.style.visibility = 'hidden';
-        temp.innerHTML = content;
+        temp.innerHTML = editor.innerHTML;
         document.body.appendChild(temp);
 
-        const pageHeight = 963; // 1123 - margins/headers
-        const totalPages = Math.max(1, Math.ceil(temp.offsetHeight / pageHeight));
+        const pageHeight = 963;
+        let p = document.createElement('div');
+        p.className = 'page';
+        p.innerHTML = `<div class="doc-header">Document</div><div class="content" style="height:${pageHeight}px"></div><div class="doc-footer"></div>`;
+        
+        let currentHeight = 0;
+        let pageCount = 1;
 
-        for (let i = 0; i < totalPages; i++) {
-            const page = document.createElement('div');
-            page.className = 'page';
-            page.innerHTML = `
-                <div class="doc-header">Professional Document</div>
-                <div style="height:${pageHeight}px; overflow:hidden;">
-                    <div style="margin-top:-${i * pageHeight}px">${content}</div>
-                </div>
-                <div class="doc-footer">Page ${i + 1} of ${totalPages}</div>
-            `;
-            container.appendChild(page);
-        }
+        Array.from(temp.children).forEach(child => {
+            const h = child.offsetHeight + 16; // 16px margin
+            if (currentHeight + h > pageHeight) {
+                p.querySelector('.doc-footer').innerText = `Page ${pageCount}`;
+                container.appendChild(p);
+                p = document.createElement('div');
+                p.className = 'page';
+                p.innerHTML = `<div class="doc-header">Document</div><div class="content" style="height:${pageHeight}px"></div><div class="doc-footer"></div>`;
+                currentHeight = 0;
+                pageCount++;
+            }
+            p.querySelector('.content').appendChild(child.cloneNode(true));
+            currentHeight += h;
+        });
+
+        p.querySelector('.doc-footer').innerText = `Page ${pageCount}`;
+        container.appendChild(p);
         document.body.removeChild(temp);
-        localStorage.setItem('doc-state', content);
+        localStorage.setItem('doc-state', editor.innerHTML);
     }
 
     async function exportToPDF() {
@@ -89,7 +91,7 @@
     }
 
     window.onload = () => {
-        document.getElementById('hiddenEditor').innerHTML = localStorage.getItem('doc-state') || '<h1>Title</h1>';
+        document.getElementById('editor').innerHTML = localStorage.getItem('doc-state') || '<h1>New Document</h1>';
         paginate();
     };
 </script>
