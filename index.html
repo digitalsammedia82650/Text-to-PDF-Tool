@@ -3,71 +3,79 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Ultimate PDF Studio Pro</title>
+    <title>Multi-Page PDF Engine</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
-        :root { --primary:#6366f1; --border:#cbd5e1; }
-        body { margin:0; display:flex; height:100vh; background:#f1f5f9; font-family:sans-serif; }
-        .sidebar { width:350px; background:white; border-right:1px solid var(--border); padding:20px; overflow-y:auto; }
-        .workspace { flex:1; padding:40px; overflow-y:auto; display:flex; flex-direction:column; align-items:center; gap:20px; }
-        .page { width:595px; height:842px; background:white; position:relative; box-shadow:0 10px 25px rgba(0,0,0,0.1); padding:50px; box-sizing:border-box; }
-        .editor { width:100%; height:200px; border:1px solid var(--border); padding:10px; margin-bottom:10px; outline:none; }
-        .btn { width:100%; padding:10px; margin-top:5px; cursor:pointer; background:var(--primary); color:white; border:none; border-radius:4px; font-weight:bold; }
+        body { margin:0; background:#e2e8f0; font-family:sans-serif; }
+        .toolbar { position:fixed; top:0; left:0; width:300px; height:100vh; background:white; padding:20px; border-right:1px solid #ccc; z-index:100; }
+        .workspace { margin-left:340px; padding:40px; display:flex; flex-direction:column; align-items:center; gap:20px; }
+        
+        /* A4 Page Styling */
+        .page { 
+            width: 595px; height: 842px; background: white; 
+            padding: 50px; box-sizing: border-box; position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .page-content { height: 700px; overflow: hidden; }
+        .page-number { position: absolute; bottom: 20px; right: 20px; font-size: 12px; }
+        
+        #editor { width: 100%; height: 200px; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px; outline: none; }
+        .btn { width: 100%; padding: 10px; background: #4f46e5; color: white; border: none; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="sidebar">
-    <h3>Document Settings</h3>
-    <div id="editor" class="editor" contenteditable="true" oninput="updateDocument()"></div>
+<div class="toolbar">
+    <h3>Document Manager</h3>
+    <div id="editor" contenteditable="true" oninput="paginate()"></div>
     
-    <label>Border Thickness (px)</label>
-    <input type="number" id="bWidth" value="1" oninput="updateDocument()">
+    <label>Page Border (px)</label>
+    <input type="number" id="bWidth" value="1" oninput="paginate()">
     
-    <label>Font Size (px)</label>
-    <input type="number" id="fSize" value="16" oninput="updateDocument()">
-
-    <button class="btn" onclick="exportPDF()">Download Multi-Page PDF</button>
+    <button class="btn" onclick="downloadPDF()">Download PDF</button>
 </div>
 
-<div class="workspace" id="pageContainer">
+<div class="workspace" id="workspace">
     </div>
 
 <script>
-    function updateDocument() {
-        const text = document.getElementById('editor').innerHTML;
+    function paginate() {
+        const editor = document.getElementById('editor');
+        const workspace = document.getElementById('workspace');
         const bWidth = document.getElementById('bWidth').value;
-        const fSize = document.getElementById('fSize').value;
         
-        const container = document.getElementById('pageContainer');
-        container.innerHTML = '';
+        // 1. Clear Workspace
+        workspace.innerHTML = '';
         
-        // Pagination Intelligence: Split content into chunks
-        // This is a simplified chunking logic
-        const pages = splitContent(text, 1500); 
+        // 2. Logic: Create a hidden mirror to calculate overflow
+        const content = editor.innerHTML;
+        const temp = document.createElement('div');
+        temp.style.width = "495px"; // A4 Width - Padding
+        temp.style.visibility = "hidden";
+        temp.innerHTML = content;
+        document.body.appendChild(temp);
         
-        pages.forEach((content, i) => {
+        // 3. Simple Pagination Loop
+        let pages = Math.max(1, Math.ceil(temp.offsetHeight / 700));
+        
+        for(let i=0; i<pages; i++) {
             const page = document.createElement('div');
             page.className = 'page';
             page.style.border = `${bWidth}px solid black`;
             page.innerHTML = `
-                <div style="font-size:${fSize}px">${content}</div>
-                <div style="position:absolute; bottom:20px; right:20px;">Page ${i + 1}</div>
+                <div class="page-content">${content}</div>
+                <div class="page-number">Page ${i + 1} of ${pages}</div>
             `;
-            container.appendChild(page);
-        });
+            workspace.appendChild(page);
+        }
         
-        localStorage.setItem('pdf_state', JSON.stringify({text, bWidth, fSize}));
+        document.body.removeChild(temp);
+        localStorage.setItem('doc_state', JSON.stringify({text: content, bWidth}));
     }
 
-    function splitContent(str, limit) {
-        // Logic to break content based on height
-        return [str]; // Placeholder for advanced regex splitting
-    }
-
-    async function exportPDF() {
+    async function downloadPDF() {
         const { jsPDF } = window.jspdf;
         const pages = document.querySelectorAll('.page');
         const pdf = new jsPDF('p', 'pt', 'a4');
@@ -81,11 +89,11 @@
     }
 
     window.onload = () => {
-        const saved = JSON.parse(localStorage.getItem('pdf_state'));
+        const saved = JSON.parse(localStorage.getItem('doc_state'));
         if(saved) {
             document.getElementById('editor').innerHTML = saved.text;
             document.getElementById('bWidth').value = saved.bWidth;
-            updateDocument();
+            paginate();
         }
     };
 </script>
