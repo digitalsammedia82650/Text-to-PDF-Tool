@@ -3,102 +3,99 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Professional Text-To-PDF Studio</title>
-    
+    <title>Ultimate Pro PDF Studio</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-
     <style>
         :root { --bg:#eef2ff; --primary:#7c3aed; --border:#dbe4f0; }
-        body { margin:0; font-family:Inter,sans-serif; background:var(--bg); display:flex; height:100vh; overflow:hidden; }
-        
-        .app { display:flex; flex-direction:column; width:100%; }
-        header { height:70px; background:white; border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 20px; justify-content:space-between; }
-        
-        .main { display:flex; flex:1; overflow:hidden; }
-        .sidebar { width:400px; padding:20px; overflow-y:auto; background:white; border-right:1px solid var(--border); }
+        body { margin:0; display:flex; height:100vh; font-family:sans-serif; background:var(--bg); }
+        .sidebar { width:380px; background:white; border-right:1px solid var(--border); padding:20px; overflow-y:auto; }
         .workspace { flex:1; display:flex; justify-content:center; align-items:flex-start; padding:40px; overflow:auto; }
-        
-        #editor { min-height:300px; padding:20px; border:1px solid var(--border); border-radius:12px; outline:none; }
-        .canvas-shell { background:white; box-shadow:0 10px 30px rgba(0,0,0,0.1); }
-        
-        .btn { padding:10px 20px; border-radius:8px; border:none; cursor:pointer; font-weight:700; background:var(--primary); color:white; }
-        .btn:hover { opacity:0.9; }
+        #editor { min-height:200px; border:1px solid var(--border); padding:15px; border-radius:12px; outline:none; margin-bottom:15px; }
+        .control-group { margin-bottom:15px; }
+        label { display:block; font-size:11px; font-weight:900; text-transform:uppercase; color:#64748b; margin-bottom:5px; }
+        .btn-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+        .btn { padding:10px; border:none; border-radius:8px; cursor:pointer; font-weight:700; background:var(--primary); color:white; }
+        .full { width:100%; background:#0f172a; }
     </style>
 </head>
 <body>
 
-<div class="app">
-    <header>
-        <div style="font-weight:900;">TEXT<span>.</span>TO<span>.</span>PDF</div>
-        <button class="btn" onclick="generatePDF()">Download PDF</button>
-    </header>
+<div class="sidebar">
+    <h3>Project Editor</h3>
+    <div id="editor" contenteditable="true" oninput="saveAndRender()"><h1>Title</h1><p>Enter text here...</p></div>
+    
+    <div class="control-group">
+        <label>Background Color</label>
+        <input type="color" id="bgColor" oninput="saveAndRender()">
+    </div>
+    
+    <div class="btn-row">
+        <button class="btn" onclick="undo()">Undo</button>
+        <button class="btn" onclick="redo()">Redo</button>
+    </div>
+    <button class="btn full" onclick="generatePDF()">Download Final PDF</button>
+    <button class="btn full" style="background:#ef4444; margin-top:10px;" onclick="clearStorage()">Reset Project</button>
+</div>
 
-    <div class="main">
-        <div class="sidebar">
-            <h3>Content Editor</h3>
-            <div id="editor" contenteditable="true" oninput="render()">
-                <h1>Design your page</h1>
-                <p>Type here and click download PDF...</p>
-            </div>
-            <br>
-            <label>Canvas Width</label>
-            <input type="number" id="cWidth" value="800" onchange="render()">
-            <label>Canvas Height</label>
-            <input type="number" id="cHeight" value="1000" onchange="render()">
-        </div>
-
-        <div class="workspace">
-            <div class="canvas-shell" id="captureArea">
-                <svg id="svgCanvas" xmlns="http://www.w3.org/2000/svg" width="800" height="1000">
-                    <rect width="100%" height="100%" fill="white" />
-                    <foreignObject id="fo" x="40" y="40" width="720" height="920">
-                        <div xmlns="http://www.w3.org/1999/xhtml" id="renderContent" style="padding:20px; font-family:sans-serif;"></div>
-                    </foreignObject>
-                </svg>
-            </div>
-        </div>
+<div class="workspace">
+    <div class="canvas-shell" id="captureArea">
+        <svg id="svgCanvas" width="595" height="842">
+            <rect id="bgRect" width="100%" height="100%" fill="white" />
+            <foreignObject id="fo" x="40" y="40" width="515" height="762">
+                <div xmlns="http://www.w3.org/1999/xhtml" id="renderContent" style="padding:20px;"></div>
+            </foreignObject>
+        </svg>
     </div>
 </div>
 
 <script>
-    function render() {
-        const editor = document.getElementById('editor');
-        const renderContent = document.getElementById('renderContent');
-        const svg = document.getElementById('svgCanvas');
-        const width = document.getElementById('cWidth').value;
-        const height = document.getElementById('cHeight').value;
+    // State Management
+    let state = { history: [''], pointer: 0, bgColor: '#ffffff' };
 
-        svg.setAttribute('width', width);
-        svg.setAttribute('height', height);
-        document.getElementById('fo').setAttribute('width', width - 80);
-        document.getElementById('fo').setAttribute('height', height - 80);
-        
-        renderContent.innerHTML = editor.innerHTML;
+    function saveAndRender() {
+        const content = document.getElementById('editor').innerHTML;
+        state.bgColor = document.getElementById('bgColor').value;
+        state.history = state.history.slice(0, state.pointer + 1);
+        state.history.push(content);
+        state.pointer++;
+        localStorage.setItem('pdfStudio_data', JSON.stringify(state));
+        render();
     }
+
+    function render() {
+        document.getElementById('renderContent').innerHTML = document.getElementById('editor').innerHTML;
+        document.getElementById('bgRect').setAttribute('fill', state.bgColor);
+    }
+
+    function undo() { if (state.pointer > 0) { state.pointer--; updateEditor(); } }
+    function redo() { if (state.pointer < state.history.length - 1) { state.pointer++; updateEditor(); } }
+
+    function updateEditor() {
+        document.getElementById('editor').innerHTML = state.history[state.pointer];
+        render();
+    }
+
+    function clearStorage() { localStorage.removeItem('pdfStudio_data'); location.reload(); }
 
     async function generatePDF() {
         const { jsPDF } = window.jspdf;
-        const element = document.getElementById('captureArea');
-        
-        // Use html2canvas to capture the visual workspace
-        const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-        const imgData = canvas.toDataURL('image/png');
-        
-        // Define PDF dimensions based on current canvas
-        const width = document.getElementById('cWidth').value;
-        const height = document.getElementById('cHeight').value;
-        const orientation = width > height ? 'l' : 'p';
-        
-        const pdf = new jsPDF(orientation, 'px', [width, height]);
-        pdf.addImage(imgData, 'PNG', 0, 0, width, height);
-        pdf.save("my-document.pdf");
+        const canvas = await html2canvas(document.getElementById('captureArea'), { scale: 3 });
+        const pdf = new jsPDF('p', 'pt', 'a4');
+        pdf.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 595, 842);
+        pdf.save("final_document.pdf");
     }
 
-    // Initialize
-    window.onload = render;
+    window.onload = () => {
+        const saved = localStorage.getItem('pdfStudio_data');
+        if (saved) {
+            state = JSON.parse(saved);
+            document.getElementById('editor').innerHTML = state.history[state.pointer];
+            document.getElementById('bgColor').value = state.bgColor;
+            render();
+        }
+    };
 </script>
 
 </body>
