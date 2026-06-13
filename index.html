@@ -6,63 +6,77 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { margin: 0; background: #e2e8f0; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; }
+        body { margin: 0; background: #e2e8f0; display: flex; flex-direction: column; align-items: center; font-family: Arial, sans-serif; }
+        .ribbon { position: sticky; top: 0; width: 100%; background: #fff; padding: 12px; border-bottom: 1px solid #ccc; display: flex; gap: 8px; justify-content: center; z-index: 1000; }
         
-        /* Ribbon stays fixed at the top */
-        .ribbon { 
-            position: sticky; top: 0; width: 100%; background: #fff; padding: 12px; 
-            border-bottom: 1px solid #ccc; display: flex; gap: 8px; justify-content: center; 
-            z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-        }
-        
-        /* The single A4 Page Canvas acting as the editor */
+        /* The Pages Container */
+        .workspace { display: flex; flex-direction: column; gap: 40px; padding: 40px; }
         .page { 
-            width: 794px; min-height: 1123px; background: white; margin: 40px 0;
+            width: 794px; min-height: 1123px; background: white; 
             padding: 96px; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.1); 
-            outline: none; /* Allows direct editing */
+            outline: none; position: relative;
         }
-        
-        button { padding: 8px 15px; cursor: pointer; border: 1px solid #ccc; background: #f8f8f8; border-radius: 4px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="ribbon">
-    <button onclick="document.execCommand('bold')">B</button>
-    <button onclick="document.execCommand('italic')">I</button>
-    <button onclick="document.execCommand('underline')">U</button>
+    <button onclick="document.execCommand('bold')"><b>B</b></button>
+    <button onclick="document.execCommand('italic')"><i>I</i></button>
     <button onclick="document.execCommand('justifyLeft')">Left</button>
     <button onclick="document.execCommand('justifyCenter')">Center</button>
-    <button onclick="document.execCommand('justifyFull')">Justify</button>
     <button onclick="document.execCommand('insertUnorderedList')">List</button>
-    <button onclick="exportPDF()" style="background:#0f172a; color:#fff;">Export PDF</button>
+    <button onclick="exportPDF()" style="background:#0f172a; color:#fff;">Export Multi-Page PDF</button>
 </div>
 
-<div class="page" id="editor" contenteditable="true">
-    <h1>New Document</h1>
-    <p>Type or paste your text directly here. No separate editor needed.</p>
+<div class="workspace" id="workspace">
+    <div class="page" id="editor" contenteditable="true">
+        <h1>Research Paper Title</h1>
+        <p>Paste your long document content here. The system will automatically slice this content into multiple pages for the PDF output.</p>
+    </div>
 </div>
 
 <script>
-    const editor = document.getElementById('editor');
+    // Logic to split the editor content into visual pages dynamically
+    function generatePDFPages() {
+        const content = document.getElementById('editor').innerHTML;
+        const pageHeight = 931; // A4 content area
 
-    // Auto-save logic
-    editor.addEventListener('input', () => {
-        localStorage.setItem('doc-data', editor.innerHTML);
-    });
+        // Temporary measurement
+        const temp = document.createElement('div');
+        temp.style.width = '602px'; temp.style.position = 'absolute'; temp.style.visibility = 'hidden';
+        temp.innerHTML = content;
+        document.body.appendChild(temp);
 
-    // Load saved data
-    window.onload = () => {
-        editor.innerHTML = localStorage.getItem('doc-data') || editor.innerHTML;
-    };
+        const totalPages = Math.ceil(temp.offsetHeight / pageHeight);
+        document.body.removeChild(temp);
+        return totalPages;
+    }
 
-    // PDF Export logic
     async function exportPDF() {
         const { jsPDF } = window.jspdf;
-        const canvas = await html2canvas(editor, { scale: 2 });
-        const img = canvas.toDataURL('image/jpeg', 1.0);
+        const editor = document.getElementById('editor');
+        const content = editor.innerHTML;
+        const pageHeight = 931;
+        
         const pdf = new jsPDF('p', 'pt', 'a4');
-        pdf.addImage(img, 'JPEG', 0, 0, 595, 842);
+        const totalPages = Math.ceil(editor.offsetHeight / pageHeight);
+
+        for (let i = 0; i < totalPages; i++) {
+            if (i > 0) pdf.addPage();
+            
+            // Create a temporary SVG-based container for each page slice
+            const pageSlice = document.createElement('div');
+            pageSlice.className = 'page';
+            pageSlice.style.overflow = 'hidden';
+            pageSlice.innerHTML = `<div style="margin-top:-${i * pageHeight}px">${content}</div>`;
+            document.body.appendChild(pageSlice);
+            
+            const canvas = await html2canvas(pageSlice, { scale: 2 });
+            pdf.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 595, 842);
+            
+            document.body.removeChild(pageSlice);
+        }
         pdf.save("document.pdf");
     }
 </script>
