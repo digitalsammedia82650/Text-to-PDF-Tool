@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Professional Text-To-PDF Studio</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root { --bg:#eef2ff; --primary:#7c3aed; --border:#dbe4f0; }
+        body { margin:0; font-family:Inter,sans-serif; background:var(--bg); display:flex; height:100vh; overflow:hidden; }
+        
+        .app { display:flex; flex-direction:column; width:100%; }
+        header { height:70px; background:white; border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 20px; justify-content:space-between; }
+        
+        .main { display:flex; flex:1; overflow:hidden; }
+        .sidebar { width:400px; padding:20px; overflow-y:auto; background:white; border-right:1px solid var(--border); }
+        .workspace { flex:1; display:flex; justify-content:center; align-items:flex-start; padding:40px; overflow:auto; }
+        
+        #editor { min-height:300px; padding:20px; border:1px solid var(--border); border-radius:12px; outline:none; }
+        .canvas-shell { background:white; box-shadow:0 10px 30px rgba(0,0,0,0.1); }
+        
+        .btn { padding:10px 20px; border-radius:8px; border:none; cursor:pointer; font-weight:700; background:var(--primary); color:white; }
+        .btn:hover { opacity:0.9; }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <header>
+        <div style="font-weight:900;">TEXT<span>.</span>TO<span>.</span>PDF</div>
+        <button class="btn" onclick="generatePDF()">Download PDF</button>
+    </header>
+
+    <div class="main">
+        <div class="sidebar">
+            <h3>Content Editor</h3>
+            <div id="editor" contenteditable="true" oninput="render()">
+                <h1>Design your page</h1>
+                <p>Type here and click download PDF...</p>
+            </div>
+            <br>
+            <label>Canvas Width</label>
+            <input type="number" id="cWidth" value="800" onchange="render()">
+            <label>Canvas Height</label>
+            <input type="number" id="cHeight" value="1000" onchange="render()">
+        </div>
+
+        <div class="workspace">
+            <div class="canvas-shell" id="captureArea">
+                <svg id="svgCanvas" xmlns="http://www.w3.org/2000/svg" width="800" height="1000">
+                    <rect width="100%" height="100%" fill="white" />
+                    <foreignObject id="fo" x="40" y="40" width="720" height="920">
+                        <div xmlns="http://www.w3.org/1999/xhtml" id="renderContent" style="padding:20px; font-family:sans-serif;"></div>
+                    </foreignObject>
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function render() {
+        const editor = document.getElementById('editor');
+        const renderContent = document.getElementById('renderContent');
+        const svg = document.getElementById('svgCanvas');
+        const width = document.getElementById('cWidth').value;
+        const height = document.getElementById('cHeight').value;
+
+        svg.setAttribute('width', width);
+        svg.setAttribute('height', height);
+        document.getElementById('fo').setAttribute('width', width - 80);
+        document.getElementById('fo').setAttribute('height', height - 80);
+        
+        renderContent.innerHTML = editor.innerHTML;
+    }
+
+    async function generatePDF() {
+        const { jsPDF } = window.jspdf;
+        const element = document.getElementById('captureArea');
+        
+        // Use html2canvas to capture the visual workspace
+        const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+        const imgData = canvas.toDataURL('image/png');
+        
+        // Define PDF dimensions based on current canvas
+        const width = document.getElementById('cWidth').value;
+        const height = document.getElementById('cHeight').value;
+        const orientation = width > height ? 'l' : 'p';
+        
+        const pdf = new jsPDF(orientation, 'px', [width, height]);
+        pdf.addImage(imgData, 'PNG', 0, 0, width, height);
+        pdf.save("my-document.pdf");
+    }
+
+    // Initialize
+    window.onload = render;
+</script>
+
+</body>
+</html>
