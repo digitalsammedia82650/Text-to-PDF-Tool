@@ -2,94 +2,94 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Architect Studio</title>
+    <title>Pro Architect Editor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --bg:#eef2ff; --panel:#ffffff; --border:#dbe4f0; --primary:#7c3aed; }
-        body { margin:0; font-family:Inter,sans-serif; background:var(--bg); height:100vh; display:flex; flex-direction:column; }
+        :root { --bg:#f1f5f9; --page-shadow:0 0 10px rgba(0,0,0,0.1); }
+        body { margin:0; background:var(--bg); font-family:Arial,sans-serif; height:100vh; display:flex; flex-direction:column; }
         
-        /* Layout */
-        header { height:74px; background:white; border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 20px; justify-content:space-between; }
-        .main { flex:1; display:flex; overflow:hidden; }
-        .sidebar { width:400px; background:white; border-right:1px solid var(--border); overflow-y:auto; padding:20px; }
+        /* Toolbar */
+        .ribbon { background:white; padding:10px; border-bottom:1px solid #ccc; display:flex; gap:5px; flex-wrap:wrap; position:sticky; top:0; z-index:1000; }
+        .group { border-right:1px solid #ddd; padding-right:5px; display:flex; gap:2px; }
+        
+        /* Canvas */
         .workspace { flex:1; overflow-y:auto; padding:40px; display:flex; flex-direction:column; align-items:center; gap:40px; }
+        .page { width:794px; min-height:1123px; background:white; box-shadow:var(--page-shadow); padding:96px; box-sizing:border-box; position:relative; }
+        .editor { width:100%; height:100%; outline:none; }
         
-        /* Document Styles */
-        .page { width:794px; min-height:1123px; background:white; padding:70px 60px; box-shadow:0 10px 25px rgba(0,0,0,0.1); position:relative; box-sizing:border-box; }
-        .doc-header { position:absolute; top:20px; left:60px; right:60px; border-bottom:1px solid #ddd; font-size:12px; color:#666; }
-        .doc-footer { position:absolute; bottom:20px; left:60px; right:60px; border-top:1px solid #ddd; text-align:center; font-size:12px; color:#666; }
-        
-        #editor { min-height:500px; outline:none; border:1px solid var(--border); padding:15px; border-radius:12px; }
+        /* Helpers */
+        .doc-footer { position:absolute; bottom:20px; width:100%; text-align:center; font-size:12px; color:#888; }
+        .dark-mode { background:#333; color:#eee; }
+        .dark-mode .page { background:#444; color:#eee; }
     </style>
 </head>
 <body>
 
-<header>
-    <div class="logo">Document <span>Architect</span></div>
-    <button class="btn" onclick="exportPDF()" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:8px;">Download PDF</button>
-</header>
+<div class="ribbon">
+    <div class="group">
+        <button onclick="fmt('bold')"><b>B</b></button>
+        <button onclick="fmt('italic')"><i>I</i></button>
+        <button onclick="fmt('underline')"><u>U</u></button>
+        <button onclick="fmt('strikeThrough')"><s>S</s></button>
+    </div>
+    <div class="group">
+        <button onclick="fmt('justifyLeft')">Left</button>
+        <button onclick="fmt('justifyCenter')">Center</button>
+        <button onclick="fmt('justifyFull')">Justify</button>
+    </div>
+    <div class="group">
+        <select onchange="fmt('formatBlock', this.value)">
+            <option value="p">Paragraph</option>
+            <option value="h1">Heading 1</option>
+            <option value="h2">Heading 2</option>
+        </select>
+        <button onclick="exportPDF()">Export PDF</button>
+        <button onclick="toggleDark()">Dark</button>
+    </div>
+</div>
 
-<div class="main">
-    <aside class="sidebar">
-        <div id="editor" contenteditable="true" oninput="paginate()">
-            <h1>Document Title</h1>
-            <p>Type your content here. Pagination generates automatically.</p>
+<div class="workspace" id="workspace">
+    <div class="page" id="page">
+        <div class="editor" id="editor" contenteditable="true">
+            <h1>New Document</h1>
+            <p>Start typing your professional content here...</p>
         </div>
-    </aside>
-
-    <div class="workspace" id="workspace"></div>
+        <div class="doc-footer" id="footer">Page 1</div>
+    </div>
 </div>
 
 <script>
-    // Pagination Engine
-    function paginate() {
-        const editor = document.getElementById('editor');
-        const workspace = document.getElementById('workspace');
-        const content = editor.innerHTML;
-        workspace.innerHTML = '';
+    const editor = document.getElementById('editor');
 
-        // Create mirror for height calculation
-        const temp = document.createElement('div');
-        temp.style.width = '674px'; temp.style.position = 'absolute'; temp.style.visibility = 'hidden';
-        temp.innerHTML = content;
-        document.body.appendChild(temp);
-
-        const pageHeight = 963; // A4 height minus margins
-        const totalPages = Math.max(1, Math.ceil(temp.offsetHeight / pageHeight));
-
-        for (let i = 0; i < totalPages; i++) {
-            const page = document.createElement('div');
-            page.className = 'page';
-            page.innerHTML = `
-                <div class="doc-header">Professional Document</div>
-                <div style="height:${pageHeight}px; overflow:hidden;">
-                    <div style="margin-top:-${i * pageHeight}px">${content}</div>
-                </div>
-                <div class="doc-footer">Page ${i + 1} of ${totalPages}</div>
-            `;
-            workspace.appendChild(page);
-        }
-        document.body.removeChild(temp);
-        localStorage.setItem('doc-state', content);
+    // Rich Text Commands
+    function fmt(cmd, val = null) {
+        document.execCommand(cmd, false, val);
+        editor.focus();
+        save();
     }
 
+    // Save System
+    function save() {
+        localStorage.setItem('pro-doc-content', editor.innerHTML);
+    }
+
+    // PDF Export
     async function exportPDF() {
         const { jsPDF } = window.jspdf;
-        const pages = document.querySelectorAll('.page');
-        const pdf = new jsPDF('p', 'pt', [794, 1123]);
-        for (let i = 0; i < pages.length; i++) {
-            if (i > 0) pdf.addPage();
-            const canvas = await html2canvas(pages[i], { scale: 2 });
-            pdf.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 794, 1123);
-        }
-        pdf.save("document.pdf");
+        const page = document.getElementById('page');
+        const canvas = await html2canvas(page, { scale: 2 });
+        const img = canvas.toDataURL('image/jpeg', 1.0);
+        const pdf = new jsPDF('p', 'pt', 'a4');
+        pdf.addImage(img, 'JPEG', 0, 0, 595, 842);
+        pdf.save('document.pdf');
     }
 
+    function toggleDark() { document.body.classList.toggle('dark-mode'); }
+
     window.onload = () => {
-        document.getElementById('editor').innerHTML = localStorage.getItem('doc-state') || '<h1>New Document</h1>';
-        paginate();
+        editor.innerHTML = localStorage.getItem('pro-doc-content') || '<h1>New Document</h1>';
+        editor.addEventListener('input', save);
     };
 </script>
 </body>
