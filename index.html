@@ -9,64 +9,71 @@
         :root { --bg: #e2e8f0; --page: #ffffff; --border: #cbd5e1; }
         body { margin: 0; background: var(--bg); font-family: 'Arial', sans-serif; display: flex; flex-direction: column; align-items: center; }
         
-        /* Ribbon UI */
-        .ribbon { position: sticky; top: 0; z-index: 1000; width: 100%; background: #fff; padding: 12px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        button, select { padding: 8px 12px; cursor: pointer; border: 1px solid var(--border); background: #f8fafc; border-radius: 4px; font-weight: 600; }
-        
-        /* Workspace */
+        .ribbon { position: sticky; top: 0; z-index: 1000; width: 100%; background: #fff; padding: 10px; border-bottom: 1px solid var(--border); display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; }
         #workspace { display: flex; flex-direction: column; gap: 40px; padding: 40px; }
+        .page { width: 794px; min-height: 1123px; background: var(--page); padding: 96px; box-sizing: border-box; box-shadow: 0 0 15px rgba(0,0,0,0.1); outline: none; position: relative; }
         
-        /* The Page - Professional A4 */
-        .page { 
-            width: 794px; min-height: 1123px; background: var(--page); padding: 96px; 
-            box-sizing: border-box; box-shadow: 0 0 15px rgba(0,0,0,0.1); 
-            outline: none; position: relative; border: 1px solid #eee;
-        }
-        
-        /* Text & Table Styling */
-        p { margin-bottom: 1.5em; line-height: 1.6; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-        hr { border: 0; border-top: 1px solid #ccc; margin: 20px 0; }
+        /* Table Styles */
+        table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+        th, td { border: 1px solid #333; padding: 8px; min-width: 50px; }
     </style>
 </head>
 <body>
 
 <div class="ribbon">
-    <select onchange="document.execCommand('fontSize', false, this.value)">
-        <option value="3">Normal</option>
-        <option value="5">Large</option>
-        <option value="7">Heading</option>
+    <button onclick="document.execCommand('undo')">↩</button>
+    <button onclick="document.execCommand('redo')">↪</button>
+    <select onchange="document.execCommand('fontName', false, this.value)">
+        <option value="Arial">Arial</option><option value="Times New Roman">Times</option><option value="Courier New">Courier</option>
     </select>
-    <button onclick="document.execCommand('bold')">B</button>
-    <button onclick="document.execCommand('italic')">I</button>
-    <button onclick="insertTable()">Insert Table</button>
-    <button onclick="document.execCommand('insertHorizontalRule')">Divider</button>
-    <button onclick="addPage()">+ Add Page</button>
-    <button onclick="exportAllToPDF()" style="background: #2563eb; color: white;">Export PDF</button>
+    <select onchange="document.execCommand('fontSize', false, this.value)">
+        <option value="3">12pt</option><option value="4">14pt</option><option value="6">18pt</option>
+    </select>
+    <button onclick="insertTable()">Add Table</button>
+    <button onclick="addRow()">+Row</button>
+    <button onclick="addColumn()">+Col</button>
+    <button onclick="addPage()">+Page</button>
+    <button onclick="exportAllToPDF()" style="background:#2563eb; color:white;">Export PDF</button>
 </div>
 
 <div id="workspace">
-    <div class="page" contenteditable="true">
-        <h1>Untitled Document</h1>
-        <p>Start your document here. Paragraph spacing is automatically handled.</p>
-    </div>
+    <div class="page" contenteditable="true" oninput="saveDoc()"></div>
 </div>
 
 <script>
+    // Persistence Engine
+    function saveDoc() {
+        localStorage.setItem('doc-data', document.getElementById('workspace').innerHTML);
+    }
+    window.onload = () => {
+        const saved = localStorage.getItem('doc-data');
+        if (saved) document.getElementById('workspace').innerHTML = saved;
+    };
+
+    // Advanced Table Logic
+    function insertTable() {
+        const table = `<table><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table>`;
+        document.execCommand('insertHTML', false, table);
+    }
+    function addRow() {
+        const selection = window.getSelection().anchorNode.parentElement.closest('table');
+        if(selection) selection.insertRow();
+    }
+    function addColumn() {
+        const table = window.getSelection().anchorNode.parentElement.closest('table');
+        if(table) for(let row of table.rows) row.insertCell();
+    }
+
+    // Page Management
     function addPage() {
         const div = document.createElement('div');
         div.className = 'page';
         div.contentEditable = 'true';
-        div.innerHTML = '<p>New page content...</p>';
+        div.oninput = saveDoc;
         document.getElementById('workspace').appendChild(div);
     }
 
-    function insertTable() {
-        const table = `<table><tr><td>Cell 1</td><td>Cell 2</td></tr><tr><td>Cell 3</td><td>Cell 4</td></tr></table>`;
-        document.execCommand('insertHTML', false, table);
-    }
-
+    // PDF Export
     async function exportAllToPDF() {
         const { jsPDF } = window.jspdf;
         const pages = document.querySelectorAll('.page');
