@@ -4,47 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Professional Document Architect</title>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
 <style>
-:root { --fb-bg: #f0f2f5; --fb-toolbar: #ffffff; --fb-border: #dddfe2; --fb-blue: #1877f2; }
-body { margin: 0; background: var(--fb-bg); font-family: Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; }
-
-/* Facebook-Style Ribbon */
-.ribbon {
-    position: sticky; top: 0; z-index: 1000; width: 100%;
-    background: var(--fb-toolbar); border-bottom: 1px solid var(--fb-border);
-    padding: 10px; display: flex; flex-wrap: wrap; gap: 6px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1); justify-content: center;
-}
-
-.ribbon button, .ribbon select, .ribbon input {
-    padding: 6px 12px; border: 1px solid var(--fb-border); background: #f8f9fa;
-    border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;
-}
-.ribbon button:hover { background: #e4e6eb; }
-.export-btn { background: var(--fb-blue)!important; color: white!important; border: none!important; }
-
-#workspace { display: flex; flex-direction: column; gap: 40px; padding: 40px; }
-.page {
-    width: 794px; min-height: 1123px; background: #fff; padding: 96px;
-    outline: none; border: 1px solid var(--fb-border); box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-/* Image Control Classes */
-.page img {
-    resize: both;
-    overflow: auto;
-    display: inline-block;
-    max-width: 100%;
-    cursor: nwse-resize;
-    outline: 1px dashed #ccc;
-}
-
-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-th, td { border: 1px solid #333; padding: 8px; min-width: 50px; }
+    :root { --fb-bg: #f0f2f5; --fb-toolbar: #ffffff; --fb-border: #dddfe2; --fb-blue: #1877f2; }
+    body { margin: 0; background: var(--fb-bg); font-family: "Times New Roman", serif; display: flex; flex-direction: column; align-items: center; }
+    .ribbon { position: sticky; top: 0; z-index: 1000; width: 100%; background: var(--fb-toolbar); border-bottom: 1px solid var(--fb-border); padding: 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+    .ribbon button, .ribbon select, .ribbon input { padding: 8px 10px; border: 1px solid var(--fb-border); background: #f8fafc; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .export-btn { background: var(--fb-blue)!important; color: #fff!important; }
+    #workspace { display: flex; flex-direction: column; gap: 40px; padding: 40px; }
+    .page { width: 794px; min-height: 1123px; background: #fff; padding: 96px; outline: none; border: 1px solid #e5e7eb; box-shadow: 0 0 15px rgba(0,0,0,.08); }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th, td { border: 1px solid #333; padding: 8px; min-width: 50px; }
+    img { resize: both; overflow: auto; display: inline-block; cursor: nwse-resize; max-width: 100%; outline: 1px dashed #aaa; }
 </style>
 </head>
 <body>
@@ -54,19 +26,32 @@ th, td { border: 1px solid #333; padding: 8px; min-width: 50px; }
     <button onclick="document.execCommand('redo')">Redo</button>
     <select onchange="document.execCommand('fontName',false,this.value)">
         <option value="Times New Roman">Times</option><option value="Arial">Arial</option>
+        <option value="Calibri">Calibri</option><option value="Courier New">Courier</option>
+        <option value="Georgia">Georgia</option>
+    </select>
+    <select onchange="document.execCommand('fontSize',false,this.value)">
+        <option value="2">10pt</option><option value="3" selected>12pt</option>
+        <option value="4">14pt</option><option value="5">16pt</option>
+        <option value="6">18pt</option><option value="7">24pt</option>
     </select>
     <input type="color" oninput="document.execCommand('foreColor',false,this.value)">
     <button onclick="document.execCommand('bold')">B</button>
+    <button onclick="document.execCommand('italic')">I</button>
+    <button onclick="document.execCommand('underline')">U</button>
+    <button onclick="document.execCommand('justifyLeft')">Left</button>
     <button onclick="document.execCommand('justifyCenter')">Center</button>
-    <button onclick="insertTable()">+ Table</button>
+    <button onclick="document.execCommand('justifyRight')">Right</button>
+    <button onclick="document.execCommand('justifyFull')">Justify</button>
+    <button onclick="document.execCommand('insertHorizontalRule')">Divider</button>
+    <button onclick="insertTable()">Table</button>
     <button onclick="addRow()">+ Row</button>
     <button onclick="removeRow()">- Row</button>
     <button onclick="addColumn()">+ Col</button>
     <button onclick="removeColumn()">- Col</button>
-    <button onclick="deleteTable()">Delete Tbl</button>
     <input type="file" id="imgInput" style="display:none" onchange="insertImage(event)">
-    <button onclick="document.getElementById('imgInput').click()">Add Image</button>
+    <button onclick="document.getElementById('imgInput').click()">Image</button>
     <button onclick="addPage()">+ Page</button>
+    <button onclick="clearDocument()">New</button>
     <button class="export-btn" onclick="exportAllToPDF()">Export PDF</button>
 </div>
 
@@ -76,35 +61,28 @@ th, td { border: 1px solid #333; padding: 8px; min-width: 50px; }
 
 <script>
 function saveDoc(){ localStorage.setItem("doc-arch", document.getElementById("workspace").innerHTML); }
+window.onload = function(){ const saved = localStorage.getItem("doc-arch"); if(saved) document.getElementById("workspace").innerHTML = saved; };
+function clearDocument(){ if(confirm("New document?")){ localStorage.removeItem("doc-arch"); document.getElementById("workspace").innerHTML = '<div class="page" contenteditable="true" oninput="saveDoc()"></div>'; } }
+function addPage(){ const p = document.createElement("div"); p.className = "page"; p.contentEditable = "true"; p.setAttribute("oninput", "saveDoc()"); document.getElementById("workspace").appendChild(p); saveDoc(); }
 
-window.onload = function(){
-    const saved = localStorage.getItem("doc-arch");
-    if(saved) document.getElementById("workspace").innerHTML = saved;
-};
+function insertTable(){ document.execCommand("insertHTML", false, '<table><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table>'); saveDoc(); }
+function getSelectedTable() { const sel = window.getSelection(); if(!sel.rangeCount) return null; let node = sel.anchorNode; while(node && node.tagName !== "TABLE") node = node.parentElement; return node; }
+function addRow(){ const t = getSelectedTable(); if(t) { t.insertRow().insertCell().innerHTML = ""; saveDoc(); } }
+function removeRow(){ const t = getSelectedTable(); if(t && t.rows.length > 1) { t.deleteRow(-1); saveDoc(); } }
+function addColumn(){ const t = getSelectedTable(); if(t) { for(let r of t.rows) r.insertCell(); saveDoc(); } }
+function removeColumn(){ const t = getSelectedTable(); if(t && t.rows[0].cells.length > 1) { for(let r of t.rows) r.deleteCell(-1); saveDoc(); } }
 
-/* Image Handling */
 function insertImage(e){
     const reader = new FileReader();
     reader.onload = (event) => {
-        // We create an image with resize properties
         const img = document.createElement('img');
         img.src = event.target.result;
-        img.style.width = "300px";
+        img.style.width = "200px";
         document.execCommand("insertHTML", false, img.outerHTML);
         saveDoc();
     };
     reader.readAsDataURL(e.target.files[0]);
 }
-
-/* Existing Functions Retained */
-function addPage(){ const p = document.createElement("div"); p.className = "page"; p.contentEditable = "true"; p.setAttribute("oninput", "saveDoc()"); document.getElementById("workspace").appendChild(p); saveDoc(); }
-function insertTable(){ document.execCommand("insertHTML", false, '<table border="1"><tr><td></td><td></td></tr></table>'); saveDoc(); }
-function getSelectedTable() { const sel = window.getSelection(); if(!sel.rangeCount) return null; let node = sel.anchorNode; while(node && node.tagName !== "TABLE") node = node.parentElement; return node; }
-function addRow(){ const t = getSelectedTable(); if(t) { t.insertRow().insertCell(); saveDoc(); } }
-function removeRow(){ const t = getSelectedTable(); if(t && t.rows.length > 1) { t.deleteRow(-1); saveDoc(); } }
-function addColumn(){ const t = getSelectedTable(); if(t) { for(let r of t.rows) r.insertCell(); saveDoc(); } }
-function removeColumn(){ const t = getSelectedTable(); if(t && t.rows[0].cells.length > 1) { for(let r of t.rows) r.deleteCell(-1); saveDoc(); } }
-function deleteTable(){ const t = getSelectedTable(); if(t) { t.remove(); saveDoc(); } }
 
 async function exportAllToPDF(){
     const { jsPDF } = window.jspdf;
@@ -112,7 +90,7 @@ async function exportAllToPDF(){
     const pages = document.querySelectorAll(".page");
     for(let i=0; i<pages.length; i++){
         if(i > 0) pdf.addPage();
-        const canvas = await html2canvas(pages[i], {scale: 2});
+        const canvas = await html2canvas(pages[i], {scale: 2, useCORS: true});
         pdf.addImage(canvas.toDataURL("image/jpeg"), "JPEG", 0, 0, 595, 842);
     }
     pdf.save("document.pdf");
