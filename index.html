@@ -1,83 +1,375 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Professional Document Architect</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <style>
-        :root { --bg: #e2e8f0; --page: #ffffff; --border: #cbd5e1; --primary: #2563eb; }
-        body { margin: 0; background: var(--bg); font-family: 'Arial', sans-serif; display: flex; flex-direction: column; align-items: center; }
-        
-        .ribbon { position: sticky; top: 0; z-index: 1000; width: 100%; background: #fff; padding: 10px; border-bottom: 1px solid var(--border); display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        button, select, input { padding: 8px 10px; cursor: pointer; border: 1px solid var(--border); background: #f8fafc; border-radius: 4px; font-weight: 600; font-size: 13px; }
-        
-        #workspace { display: flex; flex-direction: column; gap: 40px; padding: 40px; }
-        .page { width: 794px; min-height: 1123px; background: var(--page); padding: 96px; box-sizing: border-box; box-shadow: 0 0 15px rgba(0,0,0,0.1); outline: none; position: relative; }
-        
-        p { margin-bottom: 1.5em; line-height: 1.6; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Professional Document Architect</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+:root{
+    --bg:#e2e8f0;
+    --page:#ffffff;
+    --border:#cbd5e1;
+    --primary:#2563eb;
+}
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    background:var(--bg);
+    font-family:"Times New Roman", serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+}
+
+/* Ribbon */
+
+.ribbon{
+    position:sticky;
+    top:0;
+    z-index:1000;
+    width:100%;
+    background:#fff;
+    border-bottom:1px solid var(--border);
+    padding:10px;
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:6px;
+    box-shadow:0 2px 6px rgba(0,0,0,.08);
+}
+
+.ribbon button,
+.ribbon select,
+.ribbon input{
+    padding:8px 10px;
+    border:1px solid var(--border);
+    background:#f8fafc;
+    border-radius:4px;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:600;
+}
+
+.export-btn{
+    background:var(--primary)!important;
+    color:#fff;
+}
+
+/* Workspace */
+
+#workspace{
+    display:flex;
+    flex-direction:column;
+    gap:40px;
+    padding:40px;
+}
+
+/* A4 Page */
+
+.page{
+    width:794px;
+    min-height:1123px;
+    background:#fff;
+    padding:96px;
+    outline:none;
+    border:1px solid #e5e7eb;
+    box-shadow:0 0 15px rgba(0,0,0,.08);
+    overflow:hidden;
+}
+
+/* Typography */
+
+.page p{
+    margin-bottom:1.4em;
+    line-height:1.7;
+}
+
+.page h1,
+.page h2,
+.page h3{
+    margin-top:0;
+}
+
+/* Tables */
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin:15px 0;
+}
+
+th,
+td{
+    border:1px solid #333;
+    padding:8px;
+    min-width:50px;
+}
+
+hr{
+    border:none;
+    border-top:1px solid #ccc;
+    margin:20px 0;
+}
+
+@media(max-width:900px){
+
+    #workspace{
+        padding:15px;
+    }
+
+    .page{
+        width:100%;
+        min-height:auto;
+        padding:40px;
+    }
+}
+</style>
 </head>
 <body>
 
 <div class="ribbon">
-    <button onclick="document.execCommand('undo')">Undo</button>
-    <button onclick="document.execCommand('redo')">Redo</button>
-    <select onchange="document.execCommand('fontName', false, this.value)">
-        <option value="Arial">Arial</option><option value="Times New Roman">Times</option><option value="Courier New">Courier</option>
-    </select>
-    <select onchange="document.execCommand('fontSize', false, this.value)">
-        <option value="3">12pt</option><option value="4">14pt</option><option value="6">18pt</option>
-    </select>
-    <input type="color" oninput="document.execCommand('foreColor', false, this.value)" title="Text Color">
-    <button onclick="document.execCommand('bold')">B</button>
-    <button onclick="document.execCommand('italic')">I</button>
-    <button onclick="document.execCommand('underline')">U</button>
-    <button onclick="document.execCommand('justifyLeft')">Left</button>
-    <button onclick="document.execCommand('justifyFull')">Justify</button>
-    <button onclick="document.execCommand('insertHorizontalRule')">Divider</button>
-    <button onclick="addPage()">+ Add Page</button>
-    <button onclick="exportAllToPDF()" style="background:var(--primary); color:white;">Export PDF</button>
+
+<button onclick="document.execCommand('undo')">Undo</button>
+<button onclick="document.execCommand('redo')">Redo</button>
+
+<select onchange="document.execCommand('fontName',false,this.value)">
+<option value="Times New Roman">Times New Roman</option>
+<option value="Arial">Arial</option>
+<option value="Calibri">Calibri</option>
+<option value="Courier New">Courier</option>
+<option value="Georgia">Georgia</option>
+</select>
+
+<select onchange="document.execCommand('fontSize',false,this.value)">
+<option value="2">10pt</option>
+<option value="3" selected>12pt</option>
+<option value="4">14pt</option>
+<option value="5">16pt</option>
+<option value="6">18pt</option>
+<option value="7">24pt</option>
+</select>
+
+<input
+type="color"
+title="Text Color"
+oninput="document.execCommand('foreColor',false,this.value)">
+
+<button onclick="document.execCommand('bold')">B</button>
+<button onclick="document.execCommand('italic')">I</button>
+<button onclick="document.execCommand('underline')">U</button>
+
+<button onclick="document.execCommand('justifyLeft')">Left</button>
+<button onclick="document.execCommand('justifyCenter')">Center</button>
+<button onclick="document.execCommand('justifyRight')">Right</button>
+<button onclick="document.execCommand('justifyFull')">Justify</button>
+
+<button onclick="document.execCommand('insertHorizontalRule')">Divider</button>
+
+<button onclick="insertTable()">Table</button>
+<button onclick="addRow()">+ Row</button>
+<button onclick="addColumn()">+ Column</button>
+
+<button onclick="addPage()">+ Page</button>
+
+<button onclick="clearDocument()">New Document</button>
+
+<button class="export-btn" onclick="exportAllToPDF()">
+Export PDF
+</button>
+
 </div>
 
 <div id="workspace">
-    <div class="page" contenteditable="true" oninput="saveDoc()">
-        <h1>New Document</h1>
-        <p>Start typing here...</p>
-    </div>
+
+<div class="page" contenteditable="true" oninput="saveDoc()"></div>
+
 </div>
 
 <script>
-    function saveDoc() { localStorage.setItem('doc-data', document.getElementById('workspace').innerHTML); }
-    
-    window.onload = () => {
-        const saved = localStorage.getItem('doc-data');
-        if (saved) document.getElementById('workspace').innerHTML = saved;
-    };
 
-    function addPage() {
-        const div = document.createElement('div');
-        div.className = 'page';
-        div.contentEditable = 'true';
-        div.oninput = saveDoc;
-        div.innerHTML = '<p>New Page</p>';
-        document.getElementById('workspace').appendChild(div);
-        saveDoc();
+/* ---------- Auto Save ---------- */
+
+function saveDoc(){
+    localStorage.setItem(
+        "document-architect",
+        document.getElementById("workspace").innerHTML
+    );
+}
+
+window.onload = function(){
+
+    const saved = localStorage.getItem("document-architect");
+
+    if(saved){
+        document.getElementById("workspace").innerHTML = saved;
     }
+};
 
-    async function exportAllToPDF() {
-        const { jsPDF } = window.jspdf;
-        const pages = document.querySelectorAll('.page');
-        const pdf = new jsPDF('p', 'pt', 'a4');
-        for (let i = 0; i < pages.length; i++) {
-            if (i > 0) pdf.addPage();
-            const canvas = await html2canvas(pages[i], { scale: 2 });
-            pdf.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, 595, 842);
+/* ---------- New Document ---------- */
+
+function clearDocument(){
+
+    if(confirm("Create a new blank document?")){
+
+        localStorage.removeItem("document-architect");
+
+        document.getElementById("workspace").innerHTML =
+        `<div class="page" contenteditable="true" oninput="saveDoc()"></div>`;
+    }
+}
+
+/* ---------- Add Page ---------- */
+
+function addPage(){
+
+    const page = document.createElement("div");
+
+    page.className = "page";
+    page.contentEditable = "true";
+
+    page.setAttribute(
+        "oninput",
+        "saveDoc()"
+    );
+
+    document
+        .getElementById("workspace")
+        .appendChild(page);
+
+    saveDoc();
+}
+
+/* ---------- Tables ---------- */
+
+function insertTable(){
+
+    const html = `
+    <table>
+        <tr>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    `;
+
+    document.execCommand(
+        "insertHTML",
+        false,
+        html
+    );
+
+    saveDoc();
+}
+
+function getSelectedTable(){
+
+    const sel = window.getSelection();
+
+    if(!sel.rangeCount) return null;
+
+    let node = sel.anchorNode;
+
+    while(node){
+
+        if(node.tagName === "TABLE"){
+            return node;
         }
-        pdf.save("document.pdf");
+
+        node = node.parentElement;
     }
+
+    return null;
+}
+
+function addRow(){
+
+    const table = getSelectedTable();
+
+    if(!table) return;
+
+    const cols = table.rows[0].cells.length;
+
+    const row = table.insertRow();
+
+    for(let i=0;i<cols;i++){
+        row.insertCell().innerHTML = "";
+    }
+
+    saveDoc();
+}
+
+function addColumn(){
+
+    const table = getSelectedTable();
+
+    if(!table) return;
+
+    for(let row of table.rows){
+        row.insertCell().innerHTML = "";
+    }
+
+    saveDoc();
+}
+
+/* ---------- PDF Export ---------- */
+
+async function exportAllToPDF(){
+
+    const { jsPDF } = window.jspdf;
+
+    const pages = document.querySelectorAll(".page");
+
+    const pdf = new jsPDF(
+        "p",
+        "pt",
+        "a4"
+    );
+
+    for(let i=0;i<pages.length;i++){
+
+        if(i>0){
+            pdf.addPage();
+        }
+
+        const canvas = await html2canvas(
+            pages[i],
+            {
+                scale:2,
+                useCORS:true
+            }
+        );
+
+        const img = canvas.toDataURL(
+            "image/jpeg",
+            1
+        );
+
+        pdf.addImage(
+            img,
+            "JPEG",
+            0,
+            0,
+            595,
+            842
+        );
+    }
+
+    pdf.save("document.pdf");
+}
+
 </script>
+
 </body>
 </html>
