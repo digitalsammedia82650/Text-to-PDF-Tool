@@ -9,367 +9,110 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-:root{
-    --bg:#e2e8f0;
-    --page:#ffffff;
-    --border:#cbd5e1;
-    --primary:#2563eb;
+:root {
+    --fb-bg: #f0f2f5;
+    --fb-toolbar: #ffffff;
+    --fb-border: #dddfe2;
+    --fb-blue: #1877f2;
 }
 
-*{
-    box-sizing:border-box;
+body { margin: 0; background: var(--fb-bg); font-family: Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; }
+
+/* Facebook-Style Ribbon */
+.ribbon {
+    position: sticky; top: 0; z-index: 1000; width: 100%;
+    background: var(--fb-toolbar); border-bottom: 1px solid var(--fb-border);
+    padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1); justify-content: center;
 }
 
-body{
-    margin:0;
-    background:var(--bg);
-    font-family:"Times New Roman", serif;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
+.ribbon button, .ribbon select {
+    padding: 6px 12px; border: none; background: #e4e6eb; border-radius: 6px;
+    cursor: pointer; font-weight: 600; font-size: 13px; color: #050505;
 }
 
-/* Ribbon */
+.ribbon button:hover { background: #d8dadf; }
+.export-btn { background: var(--fb-blue)!important; color: white!important; }
 
-.ribbon{
-    position:sticky;
-    top:0;
-    z-index:1000;
-    width:100%;
-    background:#fff;
-    border-bottom:1px solid var(--border);
-    padding:10px;
-    display:flex;
-    flex-wrap:wrap;
-    justify-content:center;
-    gap:6px;
-    box-shadow:0 2px 6px rgba(0,0,0,.08);
+#workspace { display: flex; flex-direction: column; gap: 40px; padding: 40px; }
+
+.page {
+    width: 794px; min-height: 1123px; background: #fff; padding: 96px;
+    outline: none; border: 1px solid var(--fb-border); box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.ribbon button,
-.ribbon select,
-.ribbon input{
-    padding:8px 10px;
-    border:1px solid var(--border);
-    background:#f8fafc;
-    border-radius:4px;
-    cursor:pointer;
-    font-size:13px;
-    font-weight:600;
-}
-
-.export-btn{
-    background:var(--primary)!important;
-    color:#fff;
-}
-
-/* Workspace */
-
-#workspace{
-    display:flex;
-    flex-direction:column;
-    gap:40px;
-    padding:40px;
-}
-
-/* A4 Page */
-
-.page{
-    width:794px;
-    min-height:1123px;
-    background:#fff;
-    padding:96px;
-    outline:none;
-    border:1px solid #e5e7eb;
-    box-shadow:0 0 15px rgba(0,0,0,.08);
-    overflow:hidden;
-}
-
-/* Typography */
-
-.page p{
-    margin-bottom:1.4em;
-    line-height:1.7;
-}
-
-.page h1,
-.page h2,
-.page h3{
-    margin-top:0;
-}
-
-/* Tables */
-
-table{
-    width:100%;
-    border-collapse:collapse;
-    margin:15px 0;
-}
-
-th,
-td{
-    border:1px solid #333;
-    padding:8px;
-    min-width:50px;
-}
-
-hr{
-    border:none;
-    border-top:1px solid #ccc;
-    margin:20px 0;
-}
-
-@media(max-width:900px){
-
-    #workspace{
-        padding:15px;
-    }
-
-    .page{
-        width:100%;
-        min-height:auto;
-        padding:40px;
-    }
-}
+/* Editable Elements */
+table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+th, td { border: 1px solid #ccc; padding: 8px; min-width: 50px; }
+img { resize: both; overflow: auto; cursor: nwse-resize; max-width: 100%; display: block; }
 </style>
 </head>
 <body>
 
 <div class="ribbon">
-
-<button onclick="document.execCommand('undo')">Undo</button>
-<button onclick="document.execCommand('redo')">Redo</button>
-
-<select onchange="document.execCommand('fontName',false,this.value)">
-<option value="Times New Roman">Times New Roman</option>
-<option value="Arial">Arial</option>
-<option value="Calibri">Calibri</option>
-<option value="Courier New">Courier</option>
-<option value="Georgia">Georgia</option>
-</select>
-
-<select onchange="document.execCommand('fontSize',false,this.value)">
-<option value="2">10pt</option>
-<option value="3" selected>12pt</option>
-<option value="4">14pt</option>
-<option value="5">16pt</option>
-<option value="6">18pt</option>
-<option value="7">24pt</option>
-</select>
-
-<input
-type="color"
-title="Text Color"
-oninput="document.execCommand('foreColor',false,this.value)">
-
-<button onclick="document.execCommand('bold')">B</button>
-<button onclick="document.execCommand('italic')">I</button>
-<button onclick="document.execCommand('underline')">U</button>
-
-<button onclick="document.execCommand('justifyLeft')">Left</button>
-<button onclick="document.execCommand('justifyCenter')">Center</button>
-<button onclick="document.execCommand('justifyRight')">Right</button>
-<button onclick="document.execCommand('justifyFull')">Justify</button>
-
-<button onclick="document.execCommand('insertHorizontalRule')">Divider</button>
-
-<button onclick="insertTable()">Table</button>
-<button onclick="addRow()">+ Row</button>
-<button onclick="addColumn()">+ Column</button>
-
-<button onclick="addPage()">+ Page</button>
-
-<button onclick="clearDocument()">New Document</button>
-
-<button class="export-btn" onclick="exportAllToPDF()">
-Export PDF
-</button>
-
+    <button onclick="document.execCommand('bold')"><b>B</b></button>
+    <button onclick="document.execCommand('italic')"><i>I</i></button>
+    <button onclick="document.execCommand('underline')"><u>U</u></button>
+    <select onchange="document.execCommand('fontName',false,this.value)">
+        <option value="Arial">Arial</option><option value="Times New Roman">Times</option>
+    </select>
+    <button onclick="insertTable()">+ Table</button>
+    <button onclick="addRow()">+ Row</button>
+    <button onclick="removeRow()">- Row</button>
+    <button onclick="addColumn()">+ Col</button>
+    <button onclick="removeColumn()">- Col</button>
+    <button onclick="deleteTable()">Delete Table</button>
+    <input type="file" id="imgInput" style="display:none" onchange="insertImage(event)">
+    <button onclick="document.getElementById('imgInput').click()">Image</button>
+    <button onclick="addPage()">+ Page</button>
+    <button class="export-btn" onclick="exportAllToPDF()">Export PDF</button>
 </div>
 
 <div id="workspace">
-
-<div class="page" contenteditable="true" oninput="saveDoc()"></div>
-
+    <div class="page" contenteditable="true" oninput="saveDoc()"></div>
 </div>
 
 <script>
+function saveDoc(){ localStorage.setItem("doc", document.getElementById("workspace").innerHTML); }
+window.onload = () => { if(localStorage.getItem("doc")) document.getElementById("workspace").innerHTML = localStorage.getItem("doc"); };
 
-/* ---------- Auto Save ---------- */
+/* Table Logic */
+function insertTable(){ document.execCommand("insertHTML", false, '<table border="1"><tr><td>Cell</td><td>Cell</td></tr></table>'); }
+function getSelectedTable() { const sel = window.getSelection(); if(!sel.rangeCount) return null; let node = sel.anchorNode; while(node && node.tagName !== "TABLE") node = node.parentElement; return node; }
+function addRow(){ const t = getSelectedTable(); if(t) t.insertRow().insertCell().innerHTML = "&nbsp;"; }
+function removeRow(){ const t = getSelectedTable(); if(t && t.rows.length > 1) t.deleteRow(-1); }
+function addColumn(){ const t = getSelectedTable(); if(t) for(let r of t.rows) r.insertCell().innerHTML = "&nbsp;"; }
+function removeColumn(){ const t = getSelectedTable(); if(t && t.rows[0].cells.length > 1) for(let r of t.rows) r.deleteCell(-1); }
+function deleteTable(){ const t = getSelectedTable(); if(t) t.remove(); }
 
-function saveDoc(){
-    localStorage.setItem(
-        "document-architect",
-        document.getElementById("workspace").innerHTML
-    );
+/* Image Logic */
+function insertImage(e){
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = document.createElement('img');
+        img.src = event.target.result;
+        img.style.width = "200px";
+        document.execCommand("insertHTML", false, img.outerHTML);
+    };
+    reader.readAsDataURL(e.target.files[0]);
 }
 
-window.onload = function(){
-
-    const saved = localStorage.getItem("document-architect");
-
-    if(saved){
-        document.getElementById("workspace").innerHTML = saved;
-    }
-};
-
-/* ---------- New Document ---------- */
-
-function clearDocument(){
-
-    if(confirm("Create a new blank document?")){
-
-        localStorage.removeItem("document-architect");
-
-        document.getElementById("workspace").innerHTML =
-        `<div class="page" contenteditable="true" oninput="saveDoc()"></div>`;
-    }
+function addPage(){ 
+    const p = document.createElement("div"); p.className = "page"; p.contentEditable = "true"; 
+    document.getElementById("workspace").appendChild(p); 
 }
-
-/* ---------- Add Page ---------- */
-
-function addPage(){
-
-    const page = document.createElement("div");
-
-    page.className = "page";
-    page.contentEditable = "true";
-
-    page.setAttribute(
-        "oninput",
-        "saveDoc()"
-    );
-
-    document
-        .getElementById("workspace")
-        .appendChild(page);
-
-    saveDoc();
-}
-
-/* ---------- Tables ---------- */
-
-function insertTable(){
-
-    const html = `
-    <table>
-        <tr>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td></td>
-            <td></td>
-        </tr>
-    </table>
-    `;
-
-    document.execCommand(
-        "insertHTML",
-        false,
-        html
-    );
-
-    saveDoc();
-}
-
-function getSelectedTable(){
-
-    const sel = window.getSelection();
-
-    if(!sel.rangeCount) return null;
-
-    let node = sel.anchorNode;
-
-    while(node){
-
-        if(node.tagName === "TABLE"){
-            return node;
-        }
-
-        node = node.parentElement;
-    }
-
-    return null;
-}
-
-function addRow(){
-
-    const table = getSelectedTable();
-
-    if(!table) return;
-
-    const cols = table.rows[0].cells.length;
-
-    const row = table.insertRow();
-
-    for(let i=0;i<cols;i++){
-        row.insertCell().innerHTML = "";
-    }
-
-    saveDoc();
-}
-
-function addColumn(){
-
-    const table = getSelectedTable();
-
-    if(!table) return;
-
-    for(let row of table.rows){
-        row.insertCell().innerHTML = "";
-    }
-
-    saveDoc();
-}
-
-/* ---------- PDF Export ---------- */
 
 async function exportAllToPDF(){
-
     const { jsPDF } = window.jspdf;
-
+    const pdf = new jsPDF("p", "pt", "a4");
     const pages = document.querySelectorAll(".page");
-
-    const pdf = new jsPDF(
-        "p",
-        "pt",
-        "a4"
-    );
-
-    for(let i=0;i<pages.length;i++){
-
-        if(i>0){
-            pdf.addPage();
-        }
-
-        const canvas = await html2canvas(
-            pages[i],
-            {
-                scale:2,
-                useCORS:true
-            }
-        );
-
-        const img = canvas.toDataURL(
-            "image/jpeg",
-            1
-        );
-
-        pdf.addImage(
-            img,
-            "JPEG",
-            0,
-            0,
-            595,
-            842
-        );
+    for(let i=0; i<pages.length; i++){
+        if(i > 0) pdf.addPage();
+        const canvas = await html2canvas(pages[i]);
+        pdf.addImage(canvas.toDataURL("image/jpeg"), "JPEG", 0, 0, 595, 842);
     }
-
     pdf.save("document.pdf");
 }
-
 </script>
-
 </body>
 </html>
