@@ -34,21 +34,11 @@
     table { width: 100%; border-collapse: collapse; margin: 15px 0; }
     th, td { border: 1px solid #333; padding: 8px; min-width: 50px; }
     
-    /* High-Fidelity Image Container */
     .resizable-container {
-        display: inline-block;
-        resize: both;
-        overflow: auto;
-        border: 1px dashed #999;
-        cursor: nwse-resize;
-        margin: 5px;
+        display: inline-block; resize: both; overflow: auto;
+        border: 1px dashed #999; cursor: nwse-resize; margin: 5px;
     }
-    .resizable-container img {
-        display: block;
-        width: 100%;
-        height: 100%;
-        pointer-events: none; /* Allows click-through to container */
-    }
+    .resizable-container img { display: block; width: 100%; height: 100%; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -73,13 +63,15 @@
     <button onclick="document.execCommand('justifyRight')">Right</button>
     <button onclick="document.execCommand('justifyFull')">Justify</button>
     <button onclick="document.execCommand('insertHorizontalRule')">Divider</button>
-    <button onclick="insertTable()">Table</button>
+    <button onclick="insertTable()">+ Table</button>
     <button onclick="addRow()">+ Row</button>
+    <button onclick="removeRow()">- Row</button>
     <button onclick="addColumn()">+ Col</button>
+    <button onclick="removeColumn()">- Col</button>
     <input type="file" id="imgUpload" style="display:none" onchange="uploadImage(event)">
     <button onclick="document.getElementById('imgUpload').click()">Image</button>
     <button onclick="addPage()">+ Page</button>
-    <button onclick="clearDocument()">New Doc</button>
+    <button onclick="clearDocument()">New</button>
     <button class="export-btn" onclick="exportAllToPDF()">Export PDF</button>
 </div>
 
@@ -90,30 +82,28 @@
 <script>
     function saveDoc(){ localStorage.setItem("doc-arch", document.getElementById("workspace").innerHTML); }
     window.onload = () => { const saved = localStorage.getItem("doc-arch"); if(saved) document.getElementById("workspace").innerHTML = saved; };
-    function clearDocument(){ if(confirm("New document?")){ localStorage.removeItem("doc-arch"); location.reload(); } }
+    function clearDocument(){ if(confirm("Create a new document?")){ localStorage.removeItem("doc-arch"); location.reload(); } }
     function addPage(){ const p = document.createElement("div"); p.className = "page"; p.contentEditable = "true"; p.setAttribute("oninput", "saveDoc()"); document.getElementById("workspace").appendChild(p); saveDoc(); }
 
-    /* Improved Image Handling */
     function uploadImage(e){
-        const file = e.target.files[0];
-        if(!file) return;
         const reader = new FileReader();
         reader.onload = (event) => {
             const container = document.createElement('div');
             container.className = 'resizable-container';
-            container.style.width = '200px'; // Default size
+            container.style.width = '200px';
             container.innerHTML = `<img src="${event.target.result}">`;
             document.execCommand("insertHTML", false, container.outerHTML);
             saveDoc();
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(e.target.files[0]);
     }
 
-    /* Table Logic Preserved */
     function insertTable(){ document.execCommand("insertHTML", false, '<table><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table>'); saveDoc(); }
     function getSelectedTable() { const sel = window.getSelection(); if(!sel.rangeCount) return null; let node = sel.anchorNode; while(node && node.tagName !== "TABLE") node = node.parentElement; return node; }
     function addRow(){ const t = getSelectedTable(); if(t) { t.insertRow().insertCell(); saveDoc(); } }
+    function removeRow(){ const t = getSelectedTable(); if(t && t.rows.length > 1) { t.deleteRow(-1); saveDoc(); } }
     function addColumn(){ const t = getSelectedTable(); if(t) { for(let r of t.rows) r.insertCell(); saveDoc(); } }
+    function removeColumn(){ const t = getSelectedTable(); if(t && t.rows[0].cells.length > 1) { for(let r of t.rows) r.deleteCell(-1); saveDoc(); } }
 
     async function exportAllToPDF(){
         const { jsPDF } = window.jspdf;
